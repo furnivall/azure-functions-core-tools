@@ -199,6 +199,9 @@ namespace Build
                 "Microsoft.Extensions.Azure.dll",
                 "Microsoft.Identity.Client.dll",
                 "Microsoft.Identity.Client.Extensions.Msal.dll",
+                "Microsoft.Azure.AppService.Proxy.Client.dll",
+                "Microsoft.Azure.AppService.Proxy.Runtime.dll",
+                "Microsoft.Azure.AppService.Proxy.Common.dll",
                 Path.Combine("workers", "python")
             };
 
