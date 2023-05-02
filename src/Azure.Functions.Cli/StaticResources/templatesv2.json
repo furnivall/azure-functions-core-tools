@@ -192,7 +192,7 @@
         "name": "writeFile_BlueprintFile",
         "type": "WriteToFile",
         "source": "$(BLUEPRINT_CONTENT)",
-        "filePath": "$(BLUEPRINT_FILENAME).py",
+        "filePath": "$(BLUEPRINT_FILENAME)",
         "continueOnError": false,
         "errorText": "Unable to create blueprint",
         "replaceTokens": true
@@ -207,7 +207,7 @@
         "name": "appendFileContent_BlueprintBody",
         "type": "AppendToFile",
         "source": "$(BLUEPRINT_BODY_CONTENT)",
-        "filePath": "$(BLUEPRINT_FILENAME).py",
+        "filePath": "$(BLUEPRINT_FILENAME)",
         "continueOnError": false,
         "errorText": "Unable to create the Blueprint",
         "replaceTokens": true
@@ -381,7 +381,7 @@
         "name": "appendFileContent_BlueprintBody",
         "type": "AppendToFile",
         "source": "$(BLUEPRINT_BODY_CONTENT)",
-        "filePath": "$(BLUEPRINT_FILENAME).py",
+        "filePath": "$(BLUEPRINT_FILENAME)",
         "continueOnError": false,
         "errorText": "Unable to create the Blueprint",
         "replaceTokens": true
@@ -390,7 +390,7 @@
         "name": "writeFile_BlueprintFile",
         "type": "WriteToFile",
         "source": "$(BLUEPRINT_CONTENT)",
-        "filePath": "$(BLUEPRINT_FILENAME).py",
+        "filePath": "$(BLUEPRINT_FILENAME)",
         "continueOnError": false,
         "errorText": "Unable to create blueprint",
         "replaceTokens": true
@@ -574,7 +574,7 @@
         "name": "appendFileContent_BlueprintBody",
         "type": "AppendToFile",
         "source": "$(BLUEPRINT_BODY_CONTENT)",
-        "filePath": "$(BLUEPRINT_FILENAME).py",
+        "filePath": "$(BLUEPRINT_FILENAME)",
         "continueOnError": false,
         "errorText": "Unable to create the Blueprint",
         "replaceTokens": true
@@ -583,7 +583,7 @@
         "name": "writeFile_BlueprintFile",
         "type": "WriteToFile",
         "source": "$(BLUEPRINT_CONTENT)",
-        "filePath": "$(BLUEPRINT_FILENAME).py",
+        "filePath": "$(BLUEPRINT_FILENAME)",
         "continueOnError": false,
         "errorText": "Unable to create blueprint",
         "replaceTokens": true

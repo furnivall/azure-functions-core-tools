@@ -154,6 +154,7 @@ namespace Azure.Functions.Cli.Actions
                 { "$serviceBusTrigger_topicName_label", "Service Bus Topic Name" },
                 { "$serviceBusTrigger_subscriptionName_label", "Service Bus Subscripton Name" },
                 {"$timerTrigger_schedule_label", "Schedule" },
+                {"$blueprint_filename_label", "Blueprint File Name" }
             };
         }
     }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Abstractions;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
@@ -14,6 +15,7 @@ using Dynamitey;
 using Fclp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using static Azure.Functions.Cli.Common.Constants;
 using static Azure.Functions.Cli.Common.OutputTheme;
 
 namespace Azure.Functions.Cli.Actions.LocalActions
@@ -48,12 +50,16 @@ namespace Azure.Functions.Cli.Actions.LocalActions
         public bool? ManagedDependencies { get; set; }
 
         public string ProgrammingModel { get; set; }
+        
+        public bool PythonBluePrint { get; set; }
 
         public WorkerRuntime ResolvedWorkerRuntime { get; set; }
 
         public string ResolvedLanguage { get; set; }
 
         public ProgrammingModel ResolvedProgrammingModel { get; set; }
+
+        public string TemplateName { get; set; }
 
         internal static readonly Dictionary<Lazy<string>, Task<string>> fileToContentMap = new Dictionary<Lazy<string>, Task<string>>
         {
@@ -63,11 +69,16 @@ namespace Azure.Functions.Cli.Actions.LocalActions
         private readonly ITemplatesManager _templatesManager;
 
         private readonly ISecretsManager _secretsManager;
+        private readonly IUserInputHandler _userInputHandler;
+
+        Lazy<IEnumerable<NewTemplate>> _newTemplates;
 
         public InitAction(ITemplatesManager templatesManager, ISecretsManager secretsManager)
         {
             _templatesManager = templatesManager;
             _secretsManager = secretsManager;
+            _newTemplates = new Lazy<IEnumerable<NewTemplate>>(() => { return _templatesManager.NewTemplates.Result; });
+            _userInputHandler = new UserInputHandler(_templatesManager);
         }
 
         public override ICommandLineParserResult ParseArgs(string[] args)
@@ -138,6 +149,16 @@ namespace Azure.Functions.Cli.Actions.LocalActions
                 .WithDescription("Do not create getting started documentation file. Currently supported when --worker-runtime set to python.")
                 .Callback(d => GeneratePythonDocumentation = !d);
 
+            Parser
+                .Setup<string>('t', "template")
+                .WithDescription("Template name. Only supported with Python V2 Programming Model.")
+                .Callback(t => TemplateName = t);
+
+            Parser
+                .Setup<bool>("blueprint")
+                .WithDescription("Python Blueprint")
+                .Callback(b => PythonBluePrint = b);
+
             if (args.Any() && !args.First().StartsWith("-"))
             {
                 FolderName = args.First();
@@ -193,6 +214,16 @@ namespace Azure.Functions.Cli.Actions.LocalActions
                 {
                     throw new CliArgumentsException(
                         $"The {ResolvedProgrammingModel.ToString()} programming model is not supported for worker runtime {ResolvedWorkerRuntime.ToString()}. Supported programming models for worker runtime {ResolvedWorkerRuntime.ToString()} are:\n{EnumerationHelper.Join<ProgrammingModel>("\n", supportedProgrammingModels)}");
+                }
+                
+                if (!string.IsNullOrEmpty(TemplateName) && (ResolvedWorkerRuntime != Helpers.WorkerRuntime.python || ResolvedProgrammingModel != Common.ProgrammingModel.V2))
+                {
+                    throw new CliArgumentsException($"The --template parameter is only supported with Python V2 programming model.");
+                }
+
+                if (PythonBluePrint && (ResolvedWorkerRuntime != Helpers.WorkerRuntime.python || ResolvedProgrammingModel != Common.ProgrammingModel.V2))
+                {
+                    throw new CliArgumentsException($"The --blueprint parameter is only supported with Python V2 programming model.");
                 }
             }
 
@@ -273,7 +304,27 @@ namespace Azure.Functions.Cli.Actions.LocalActions
             return string.Empty;
         }
 
-        private static async Task InitLanguageSpecificArtifacts(
+        private async Task RunCreateNewBlueprintActionTemplate()
+        {
+            if (string.IsNullOrEmpty(TemplateName))
+            {
+                SelectionMenuHelper.DisplaySelectionWizardPrompt("template");
+                var triggerNames = _newTemplates.Value.Where(t => t.Language.Equals(Languages.Python, StringComparison.OrdinalIgnoreCase)).Select(t => t.Name).Distinct().ToList();
+                TemplateName = TemplateName ?? SelectionMenuHelper.DisplaySelectionWizard(triggerNames);
+            }
+
+            var template = _newTemplates.Value.FirstOrDefault(t => string.Equals(t.Name, TemplateName, StringComparison.CurrentCultureIgnoreCase) && string.Equals(t.Language, Languages.Python, StringComparison.CurrentCultureIgnoreCase));
+            var templateJob = template.Jobs.Single(x => x.Type.Equals("CreateNewBlueprint", StringComparison.OrdinalIgnoreCase));
+            var variables = new Dictionary<string, string>();
+            var providedInputs = new Dictionary<string, string>();
+
+            _userInputHandler.RunUserInputActions(providedInputs, templateJob.Inputs, variables);
+
+            var actions = template.Actions.Where(x => templateJob.Actions.Contains(x.Name, StringComparer.OrdinalIgnoreCase)).ToList();
+            await _templatesManager.Deploy(templateJob, template, variables);
+        }
+
+        private async Task InitLanguageSpecificArtifacts(
             WorkerRuntime workerRuntime,
             string language,
             ProgrammingModel programmingModel,
@@ -283,7 +334,15 @@ namespace Azure.Functions.Cli.Actions.LocalActions
             switch (workerRuntime)
             {
                 case Helpers.WorkerRuntime.python:
-                    await PythonHelpers.SetupPythonProject(programmingModel, generatePythonDocumentation);
+                    if (PythonBluePrint)
+                    {
+                        await PythonHelpers.SetupPythonProject(programmingModel, generatePythonDocumentation, RunCreateNewBlueprintActionTemplate);
+                    }
+                    else
+                    {
+                        await PythonHelpers.SetupPythonProject(programmingModel, generatePythonDocumentation);
+                    }
+                    
                     break;
                 case Helpers.WorkerRuntime.powershell:
                     await FileSystemHelpers.WriteFileIfNotExists("profile.ps1", await StaticResources.PowerShellProfilePs1);

@@ -19,7 +19,7 @@ namespace Azure.Functions.Cli.Helpers
         public static string VirtualEnvironmentPath => Environment.GetEnvironmentVariable("VIRTUAL_ENV");
         private static WorkerLanguageVersionInfo _pythonVersionCache = null;
 
-        public static async Task SetupPythonProject(ProgrammingModel programmingModel, bool generatePythonDocumentation = true)
+        public static async Task SetupPythonProject(ProgrammingModel programmingModel, bool generatePythonDocumentation = true, Func<Task> pythonV2CreateFileFunc = null)
         {
             var pyVersion = await GetEnvironmentPythonVersion();
             AssertPythonVersion(pyVersion, errorIfNoVersion: false);
@@ -41,13 +41,25 @@ namespace Azure.Functions.Cli.Helpers
 
             if (programmingModel == ProgrammingModel.V2)
             {
-                await CreateFile(Constants.PySteinFunctionAppPy);
+                if (pythonV2CreateFileFunc != null)
+                {
+                    await pythonV2CreateFileFunc();
+                }
+                else
+                {
+                    await CreateFile(Constants.PySteinFunctionAppPy);
+                }
             }
-
+            
             if (generatePythonDocumentation)
             {
                 await CreateGettingStartedMarkdown(programmingModel);
             }
+        }
+
+        private static void RunCreateFunctionAppWithBluePrint()
+        {
+
         }
 
         public static void PrintPySteinReferenceMessage()
